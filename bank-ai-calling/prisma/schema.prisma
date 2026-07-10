@@ -1,0 +1,284 @@
+// This is your Prisma schema file — it defines every table in your
+// PostgreSQL database as a TypeScript-friendly model. Prisma reads this
+// file and generates a fully-typed client you import in your code.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------
+// MODULE 1: Authentication & Roles
+// ---------------------------------------------------------------------
+
+enum Role {
+  ADMIN
+  SUPERVISOR
+  AGENT
+}
+
+model User {
+  id            String     @id @default(cuid())
+  name          String
+  email         String     @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  role          Role       @default(AGENT)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  campaigns     Campaign[] @relation("CampaignCreator")
+  accounts      Account[]
+  sessions      Session[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ---------------------------------------------------------------------
+// MODULE 4: Campaign Configuration
+// ---------------------------------------------------------------------
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+model Campaign {
+  id           String         @id @default(cuid())
+  name         String
+  aiPrompt     String         @db.Text
+  language     String         @default("en")
+  voice        String         @default("default")
+  scheduledAt  DateTime?
+  retryCount   Int            @default(1)
+  status       CampaignStatus @default(DRAFT)
+
+  createdById  String
+  createdBy    User           @relation("CampaignCreator", fields: [createdById], references: [id])
+
+  customers    Customer[]
+  calls        Call[]
+
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@map("campaigns")
+}
+
+// ---------------------------------------------------------------------
+// MODULE 3: Customer CSV Upload
+// ---------------------------------------------------------------------
+
+enum CustomerStatus {
+  PENDING
+  CALLED
+  FAILED
+  DO_NOT_CALL
+}
+
+model Customer {
+  id           String         @id @default(cuid())
+  campaignId   String
+  campaign     Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  name         String
+  phoneNumber  String
+  email        String?
+  language     String         @default("en")
+  notes        String?        @db.Text
+  status       CustomerStatus @default(PENDING)
+
+  calls        Call[]
+
+  createdAt    DateTime       @default(now())
+
+  // Prevents the same phone number being uploaded twice into one campaign.
+  @@unique([campaignId, phoneNumber])
+  @@map("customers")
+}
+
+// ---------------------------------------------------------------------
+// MODULE 5 & 6: AI Calling Engine + Live Conversation
+// ---------------------------------------------------------------------
+
+enum CallStatus {
+  QUEUED
+  RINGING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  NO_ANSWER
+}
+
+model Call {
+  id             String     @id @default(cuid())
+  campaignId     String
+  campaign       Campaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  customerId     String
+  customer       Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  twilioCallSid  String?    @unique
+  status         CallStatus @default(QUEUED)
+
+  startedAt      DateTime?
+  endedAt        DateTime?
+  durationSeconds Int?
+
+  transcript     Transcript?
+  summary        CallSummary?
+
+  createdAt      DateTime   @default(now())
+
+  @@map("calls")
+}
+
+// A single turn in the conversation — "who said what, and when."
+// Stored as a related table (not one big text blob) so the Live
+// Conversation view (Module 6) can stream turns in as they happen.
+model TranscriptTurn {
+  id           String     @id @default(cuid())
+  transcriptId String
+  transcript   Transcript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+
+  speaker      String     // "AI" or "CUSTOMER"
+  text         String     @db.Text
+  spokenAt     DateTime   @default(now())
+
+  @@map("transcript_turns")
+}
+
+model Transcript {
+  id        String            @id @default(cuid())
+  callId    String            @unique
+  call      Call              @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+  turns     TranscriptTurn[]
+
+  createdAt DateTime          @default(now())
+
+  @@map("transcripts")
+}
+
+// ---------------------------------------------------------------------
+// MODULE 7: Transcript & AI Summary
+// ---------------------------------------------------------------------
+
+model CallSummary {
+  id               String   @id @default(cuid())
+  callId           String   @unique
+  call             Call     @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+  summaryText      String   @db.Text
+  sentiment        String?  // e.g. "positive", "neutral", "negative"
+  interested       Boolean?
+  loanAmount       String?
+  callbackRequired Boolean?
+
+  createdAt        DateTime @default(now())
+
+  @@map("call_summaries")
+}
+
+// ---------------------------------------------------------------------
+// MODULE 8: Billing
+// ---------------------------------------------------------------------
+
+enum SubscriptionStatus {
+  FREE
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+model BillingAccount {
+  id                     String             @id @default(cuid())
+  freeCallsUsed          Int                @default(0)
+  freeCallsLimit         Int                @default(10)
+  subscriptionStatus     SubscriptionStatus @default(FREE)
+  razorpaySubscriptionId String?
+  currentPeriodEnd       DateTime?
+
+  usageLogs              CreditUsageLog[]
+
+  updatedAt              DateTime           @updatedAt
+
+  @@map("billing_accounts")
+}
+
+model CreditUsageLog {
+  id               String         @id @default(cuid())
+  billingAccountId String
+  billingAccount   BillingAccount @relation(fields: [billingAccountId], references: [id], onDelete: Cascade)
+
+  callId           String
+  creditsUsed      Int            @default(1)
+  createdAt        DateTime       @default(now())
+
+  @@map("credit_usage_logs")
+}
+
+// ---------------------------------------------------------------------
+// MODULE 9: Settings (platform-wide defaults — single row table)
+// ---------------------------------------------------------------------
+
+model Settings {
+  id                    String   @id @default(cuid())
+  defaultAiPrompt       String   @db.Text
+  defaultVoice          String   @default("default")
+  defaultLanguage       String   @default("en")
+  defaultRetryAttempts  Int      @default(1)
+  businessHoursStart    String   @default("09:30")
+  businessHoursEnd      String   @default("18:00")
+  webhookUrl            String?
+
+  updatedAt             DateTime @updatedAt
+
+  @@map("settings")
+}

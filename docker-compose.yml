@@ -1,0 +1,23 @@
+services:
+  main-app:
+    build: ./bank-ai-calling
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./bank-ai-calling/.env
+    restart: unless-stopped
+
+  bridge-server:
+    build: ./bank-ai-calling-bridge
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./bank-ai-calling-bridge/.env
+    restart: unless-stopped
+
+  bridge-worker:
+    build: ./bank-ai-calling-bridge
+    command: ["node", "dist/worker.js"]
+    env_file:
+      - ./bank-ai-calling-bridge/.env
+    restart: unless-stopped
