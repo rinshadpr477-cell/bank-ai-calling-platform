@@ -32,3 +32,4 @@ npm-debug.log*
 
 # Old shelved project — not part of this deployment
 bank-ivr/
+bank-ai-calling-key.pem
