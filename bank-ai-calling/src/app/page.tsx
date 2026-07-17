@@ -9,7 +9,7 @@ export default async function Home() {
 
     return (
         <div className="min-h-screen bg-[#E9E0CF]">
-            <LandingHeader isLoggedIn={Boolean(session?.user)} userName={userName} userInitial={userInitial} isAdmin={session?.user?.role === "ADMIN"} image={session?.user?.image}/>
+            <LandingHeader isLoggedIn={Boolean(session?.user)} userName={userName} userInitial={userInitial} isAdmin={session?.user?.role === "ADMIN"} image={session?.user?.image} />
 
             <section className="grid w-full items-center gap-10 px-8 py-20 md:grid-cols-2 md:py-28">
                 <div>

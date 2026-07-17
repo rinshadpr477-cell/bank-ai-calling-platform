@@ -11,15 +11,7 @@ import { campaignQueue } from './lib/campaignQueue';
 const PORT = parseInt(process.env.PORT || '8080', 10);
 const BACKEND_URL = process.env.BACKEND_URL || `http://localhost:${PORT}`;
 
-const requiredEnvVars = [
-    'TWILIO_ACCOUNT_SID',
-    'TWILIO_AUTH_TOKEN',
-    'TWILIO_PHONE_NUMBER',
-    'GOOGLE_GENAI_API_KEY',
-    'BACKEND_URL',
-    'MAIN_APP_URL',
-    'INTERNAL_API_SECRET',
-];
+const requiredEnvVars = ['TWILIO_ACCOUNT_SID','TWILIO_AUTH_TOKEN','TWILIO_PHONE_NUMBER','GOOGLE_GENAI_API_KEY','BACKEND_URL', 'MAIN_APP_URL','INTERNAL_API_SECRET',];
 
 const missing = requiredEnvVars.filter((key) => !process.env[key]);
 if (missing.length > 0) {
@@ -27,7 +19,14 @@ if (missing.length > 0) {
     process.exit(1);
 }
 
-// ─── HTTP Server (TwiML + status webhooks) ────────────────────────────────────
+function personalizePrompt(template: string, customerNotes: string | null): string {
+    const data = customerNotes && customerNotes.trim().length > 0
+        ? customerNotes
+        : "No additional customer data was provided for this call.";
+    return template.replace(/\{\{customer_data\}\}/g, data);
+}
+
+
 
 const server = createServer(async (req, res) => {
     const parsedUrl = parseUrl(req.url || '', true);
@@ -38,7 +37,6 @@ const server = createServer(async (req, res) => {
         res.end(JSON.stringify(data));
     };
 
-    // 1. TwiML webhook — Twilio hits this the moment the call connects.
     if (path === '/api/twiml' && req.method === 'POST') {
         const callId = parsedUrl.query.callId as string;
         console.log(`[Twilio] /api/twiml hit — callId=${callId}`);
@@ -58,10 +56,8 @@ const server = createServer(async (req, res) => {
         return;
     }
 
-    // 2. Twilio call-status webhook — fires on ringing/answered/completed/etc.
     if (path === '/api/call-status' && req.method === 'POST') {
         const callId = parsedUrl.query.callId as string | undefined;
-
         let body = '';
         req.on('data', (chunk) => { body += chunk.toString(); });
         req.on('end', async () => {
@@ -77,14 +73,11 @@ const server = createServer(async (req, res) => {
 
             const NEVER_CONNECTED = ['no-answer', 'busy', 'failed', 'canceled'];
             if (!callStatus || !NEVER_CONNECTED.includes(callStatus)) return;
-
             try {
                 const mappedStatus = callStatus === 'failed' ? 'FAILED' : 'NO_ANSWER';
                 await updateCallStatus(callId, mappedStatus);
-
                 const details = await getCallDetails(callId);
                 console.log(`[CallStatus] Call ${callId} never connected (${callStatus}) — queuing next attempt for campaign ${details.campaign.id}`);
-
                 await campaignQueue.add(
                     'trigger-campaign',
                     { campaignId: details.campaign.id },
@@ -97,7 +90,6 @@ const server = createServer(async (req, res) => {
         return;
     }
 
-    // 3. Trigger a campaign — manual/debug entry point.
     if (path === '/api/trigger-campaign' && req.method === 'POST') {
         let body = '';
         req.on('data', (chunk) => { body += chunk.toString(); });
@@ -126,7 +118,6 @@ const server = createServer(async (req, res) => {
     res.end('Not found');
 });
 
-// ─── WebSocket Server (Twilio Media Stream ↔ Gemini Live bridge) ──────────────
 
 const wss = new WebSocketServer({ server, path: '/media-stream' });
 
@@ -159,19 +150,14 @@ wss.on('connection', (twilioWs: WebSocket) => {
     const endCall = async (session: SessionState, finalStatus: 'COMPLETED' | 'FAILED') => {
         if (session.isEnded) return;
         session.isEnded = true;
-
         const durationSeconds = (Date.now() - session.startTime) / 1000;
-
         try {
             await updateCallStatus(session.callId, finalStatus);
         } catch (err) {
             console.error('[Bridge] Failed to update call status:', err);
         }
-
        try {
             if (session.endCallSummary) {
-                // Preferred path: the AI reported its own conclusion when it
-                // hung up.
                 await saveCallSummary(session.callId, {
                     summaryText: session.endCallSummary.summary,
                     sentiment: session.endCallSummary.sentiment,
@@ -181,18 +167,8 @@ wss.on('connection', (twilioWs: WebSocket) => {
                 });
                 console.log(`[Bridge] Saved AI-reported summary for call ${session.callId}`);
             } else if (session.transcript.length > 0) {
-                // Fallback: transcript-based summarization if any transcript exists.
                 await summarizeCall(session.callId, session.campaignPrompt, session.transcript, durationSeconds);
             } else {
-                // Neither the AI's structured report nor a transcript came
-                // through (the intermittent Gemini disconnect) — but a real
-                // conversation almost certainly happened, and the customer
-                // may have said something important we simply failed to
-                // capture. We deliberately do NOT assert interested/callback
-                // as false here — that would be actively misleading (worse
-                // than showing nothing). Leave those fields unset (unknown)
-                // so the summary honestly reflects "we don't know", not
-                // "the customer said no."
                 console.warn(`[Bridge] No summary data for call ${session.callId} — saving fallback record.`);
                 await saveCallSummary(session.callId, {
                     summaryText: `Call ran for ${Math.round(durationSeconds)}s but ended before a summary could be recorded (connection interrupted mid-call). No outcome data available — the customer may have expressed real interest or requests that were not captured. Consider a manual follow-up call.`,
@@ -246,7 +222,7 @@ wss.on('connection', (twilioWs: WebSocket) => {
                     customerName: details.customer.name,
                     campaignName: details.campaign.name,
                     campaignId: details.campaign.id,
-                    campaignPrompt: details.campaign.aiPrompt,
+                    campaignPrompt: personalizePrompt(details.campaign.aiPrompt, details.customer.notes),
                     language: details.customer.language || 'en',
                     geminiWs: null,
                     transcript: [],

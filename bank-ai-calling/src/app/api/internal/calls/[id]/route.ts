@@ -27,6 +27,7 @@ export async function GET(
       name: call.customer.name,
       phoneNumber: call.customer.phoneNumber,
       language: call.customer.language,
+      notes: call.customer.notes,
     },
     campaign: {
       id: call.campaign.id,

@@ -27,11 +27,11 @@ async function internalFetch<T>(path: string, body?: unknown, method: 'GET' | 'P
 
 export interface CallDetails {
     call: { id: string; status: string };
-    customer: { id: string; name: string; phoneNumber: string; language: string };
+    customer: { id: string; name: string; phoneNumber: string; language: string; notes: string | null };
     campaign: { id: string; name: string; aiPrompt: string; voice: string };
 }
 
-/** Fetches full call/customer/campaign context — called when the audio stream connects. */
+
 export async function getCallDetails(callId: string): Promise<CallDetails> {
     return internalFetch<CallDetails>(`/api/internal/calls/${callId}`, undefined, 'GET');
 }
@@ -43,7 +43,7 @@ export interface NextCallResult {
     campaign?: { name: string; aiPrompt: string; voice: string };
 }
 
-/** Fetches the next PENDING customer in a campaign and atomically creates a Call row for them. */
+
 export async function getNextCallForCampaign(campaignId: string): Promise<NextCallResult> {
     return internalFetch<NextCallResult>(`/api/internal/campaigns/${campaignId}/next-call`);
 }
