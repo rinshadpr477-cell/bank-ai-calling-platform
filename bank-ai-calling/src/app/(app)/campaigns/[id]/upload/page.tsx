@@ -55,7 +55,7 @@ export default function UploadCsvPage() {
           Required columns: <code>Name</code>, <code>Phone Number</code>, <code>Email</code>, <code>Language</code>, <code>Notes</code>
         </p>
         
-        <a href="/sample-customers.csv" download className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-[#132B23] underline transition-colors hover:text-[#5E775E]">⬇ Download sample CSV</a>
+       <a href="/sample-customers.csv" download className="mb-6 inline-flex items-center gap-1.5 rounded-md border border-[#132B23] px-4 py-2 text-sm font-medium text-[#132B23] transition-colors hover:bg-[#132B23] hover:text-[#E9E0CF] active:bg-[#0d1f18]">⬇ Download Sample CSV</a>
       </div>
 
       <div className="mx-auto w-full max-w-2xl">
