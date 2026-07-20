@@ -22,22 +22,26 @@ export default function UploadCsvPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!file) return;
+
+    toast.loading("Uploading and validating your CSV...", { id: "upload-toast" });
+
     setLoading(true);
     setResult(null);
     const formData = new FormData();
     formData.append("file", file);
     const res = await fetch(`/api/campaigns/${campaignId}/upload`, { method: "POST", body: formData });
     setLoading(false);
+
     const data = await res.json();
     if (!res.ok) {
-      toast.error(data.error ?? "Upload failed.");
+      toast.error(data.error ?? "Upload failed.", { id: "upload-toast" });
       return;
     }
     setResult(data);
     if (data.rejected.length > 0) {
-      toast.warning(`Imported ${data.inserted} of ${data.totalRows} rows — ${data.rejected.length} rejected.`);
+      toast.warning(`Imported ${data.inserted} of ${data.totalRows} rows — ${data.rejected.length} rejected.`, { id: "upload-toast" });
     } else {
-      toast.success(`Imported all ${data.inserted} rows successfully.`);
+      toast.success(`Imported all ${data.inserted} rows successfully.`, { id: "upload-toast" });
     }
   }
 
@@ -47,9 +51,11 @@ export default function UploadCsvPage() {
         <h1 className="mb-1 text-2xl font-semibold text-[#132B23]">
           Upload Customer CSV
         </h1>
-        <p className="mb-6 text-sm text-[#5E775E]">
+        <p className="mb-2 text-sm text-[#5E775E]">
           Required columns: <code>Name</code>, <code>Phone Number</code>, <code>Email</code>, <code>Language</code>, <code>Notes</code>
         </p>
+        
+        <a href="/sample-customers.csv" download className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-[#132B23] underline transition-colors hover:text-[#5E775E]">⬇ Download sample CSV</a>
       </div>
 
       <div className="mx-auto w-full max-w-2xl">
