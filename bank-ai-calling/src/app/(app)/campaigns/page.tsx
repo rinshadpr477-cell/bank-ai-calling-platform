@@ -1,18 +1,34 @@
+"use client";
+
 import Link from "next/link";
-import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
-import { redirect } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 
-export default async function CampaignsPage() {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
+interface Campaign {
+  id: string;
+  name: string;
+  status: string;
+  _count: { customers: number; calls: number };
+}
 
-  const campaigns = await prisma.campaign.findMany({
-    orderBy: { createdAt: "desc" },
-    include: { _count: { select: { customers: true, calls: true } } },
-  });
+export default function CampaignsPage() {
+  const { data: session } = useSession();
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const canCreate = session.user.role === "ADMIN" || session.user.role === "SUPERVISOR";
+  useEffect(() => {
+    fetch("/api/campaigns")
+      .then((res) => res.json())
+      .then((data) => setCampaigns(data.campaigns ?? []))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const canCreate = session?.user?.role === "ADMIN" || session?.user?.role === "SUPERVISOR";
+
+  const filtered = campaigns.filter((c) =>
+    c.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen w-full bg-[#E9E0CF] p-8">
@@ -26,13 +42,25 @@ export default async function CampaignsPage() {
           )}
         </div>
 
-        {campaigns.length === 0 ? (
+        <div className="mb-6">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search campaigns by name..."
+            className="w-full max-w-md rounded-md border border-[#BA9B5F]/40 bg-white px-3 py-2 text-sm text-[#132B23] outline-none focus:border-[#5E775E] focus:ring-2 focus:ring-[#5E775E]/30"
+          />
+        </div>
+
+        {loading ? (
+          <p className="text-sm text-[#5E775E]">Loading campaigns...</p>
+        ) : filtered.length === 0 ? (
           <p className="rounded-lg border border-[#BA9B5F]/30 bg-[#F5F0E6] p-6 text-sm text-[#5E775E]">
-            No campaigns yet. {canCreate ? "Create your first one to get started." : ""}
+            {search ? `No campaigns matching "${search}".` : "No campaigns yet."}
           </p>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {campaigns.map((c) => (
+            {filtered.map((c) => (
               <Link key={c.id} href={`/campaigns/${c.id}`} className="group flex flex-col rounded-xl border border-[#BA9B5F]/30 bg-[#F5F0E6] p-5 transition-colors hover:border-[#5E775E] hover:bg-[#BA9B5F]/10 active:bg-[#BA9B5F]/20">
                 <div className="flex items-start justify-between gap-2">
                   <h2 className="font-medium text-[#132B23]">{c.name}</h2>

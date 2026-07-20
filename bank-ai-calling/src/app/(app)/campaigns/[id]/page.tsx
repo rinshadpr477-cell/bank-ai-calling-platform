@@ -5,6 +5,7 @@ import Link from "next/link";
 import { StartCampaignButton } from "@/components/StartCampaignButton";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { CreditLimitChecker } from "@/components/CreditLimitChecker";
+import { DeleteCampaignButton } from "@/components/DeleteCampaignButton";
 
 export default async function CampaignDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -60,9 +61,6 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
           </p>
         </div>
 
-        {/* View Results is visible to everyone logged in — only the
-            management actions below (upload, trigger calls) are
-            restricted to Admin/Supervisor. */}
         <div className="mt-6">
           <Link href={`/campaigns/${campaign.id}/results`} className="inline-block rounded-md bg-[#5E775E] px-4 py-2 text-sm font-medium text-[#E9E0CF] transition-colors hover:bg-[#132B23] active:bg-[#0d1f18]">
             View Results
@@ -75,10 +73,18 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
               <Link href={`/campaigns/${campaign.id}/upload`} className="inline-block rounded-md bg-[#132B23] px-4 py-2 text-sm font-medium text-[#E9E0CF] transition-colors hover:bg-[#5E775E] active:bg-[#0d1f18]">
                 Upload Customer CSV
               </Link>
+              <Link href={`/campaigns/${campaign.id}/edit`} className="inline-block rounded-md border border-[#132B23] px-4 py-2 text-sm font-medium text-[#132B23] transition-colors hover:bg-[#132B23] hover:text-[#E9E0CF]">
+                Edit Campaign
+              </Link>
             </div>
             <div>
               <StartCampaignButton campaignId={campaign.id} />
             </div>
+            {session.user.role === "ADMIN" && (
+              <div>
+                <DeleteCampaignButton campaignId={campaign.id} campaignName={campaign.name} />
+              </div>
+            )}
           </div>
         )}
 
