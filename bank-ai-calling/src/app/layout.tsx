@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Toaster } from "sonner";
+import { SessionProviderWrapper } from "@/components/SessionProviderWrapper";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,18 +16,20 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        {children}
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            style: {
-              background: "#F5F0E6",
-              border: "1px solid rgba(186, 155, 95, 0.3)",
-              color: "#132B23",
-              fontFamily: "'Times New Roman', Times, serif",
-            },
-          }}
-        />
+        <SessionProviderWrapper>
+          {children}
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              style: {
+                background: "#F5F0E6",
+                border: "1px solid rgba(186, 155, 95, 0.3)",
+                color: "#132B23",
+                fontFamily: "'Times New Roman', Times, serif",
+              },
+            }}
+          />
+        </SessionProviderWrapper>
       </body>
     </html>
   );
