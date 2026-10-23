@@ -139,3 +139,40 @@ Once your domain has an active SSL certificate (HTTPS), configure the Twilio Pho
        proxy_read_timeout 3600s;
    }
    ```
+
+---
+
+## 6. EC2 Disk Space Management (Fixing "No space left on device")
+
+### Why This Happened
+On EC2 instances, Docker creates image layers, intermediate build caches (`buildx`), and dangling images during every deployment. With default 8GB EBS volumes, Docker quickly consumes 100% of the root disk, causing `git pull` and `docker compose build` to fail with `write error: No space left on device`.
+
+### Automated Fix Already Applied in `deploy.yml`
+The deployment pipeline has been updated to automatically run:
+1. `docker builder prune -af` (reclaims 3–8 GB of cached build layers).
+2. `docker image prune -af` & `docker container prune -f`.
+3. `journalctl --vacuum-time=1d` (cleans old system logs).
+4. `growpart` and `resize2fs` (automatically expands the filesystem if you resize the EBS volume in AWS).
+
+### Manual SSH One-Liner (If Running Out of Space Manually)
+If you ever need to manually reclaim disk space on your EC2 instance via SSH:
+```bash
+# SSH into EC2
+ssh -i bank-ai-calling-key.pem ubuntu@<your-ec2-ip>
+
+# Run cleanup to instantly free 5-10 GB
+docker builder prune -af
+docker system prune -af --volumes
+sudo journalctl --vacuum-time=1d
+df -h /
+```
+
+### Resizing AWS EBS Volume to 20 GB+ (Recommended)
+1. Go to **AWS EC2 Console > Volumes > Select root volume > Actions > Modify Volume**.
+2. Change size from **8 GB** to **20 GB** or **30 GB** and click **Modify**.
+3. SSH into EC2 and expand the partition:
+   ```bash
+   sudo growpart /dev/xvda 1 || sudo growpart /dev/nvme0n1 1
+   sudo resize2fs /dev/xvda1 || sudo resize2fs /dev/nvme0n1p1
+   df -h /
+   ```

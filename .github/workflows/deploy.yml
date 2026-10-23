@@ -56,6 +56,28 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           command_timeout: 20m
           script: |
+            echo "=== Reclaiming Disk Space on EC2 ==="
+            docker builder prune -af || true
+            docker image prune -af || true
+            docker container prune -f || true
+            sudo journalctl --vacuum-time=1d || true
+            sudo rm -rf /tmp/* || true
+
+            echo "=== Checking / Expanding Root Filesystem ==="
+            sudo growpart /dev/xvda 1 || sudo growpart /dev/nvme0n1 1 || sudo growpart /dev/sda 1 || true
+            sudo resize2fs /dev/xvda1 || sudo resize2fs /dev/nvme0n1p1 || sudo resize2fs /dev/sda1 || sudo xfs_growfs -d / || true
+            df -h /
+
+            echo "=== Pulling Latest Code ==="
             cd ~/bank-ai-calling-platform
+            rm -f .git/objects/pack/tmp_pack_* || true
+            git clean -f -d || true
+            git reset --hard HEAD
             git pull origin main
+
+            echo "=== Building and Starting Containers ==="
             docker compose up -d --build --remove-orphans
+
+            echo "=== Post-Deploy Cleanup ==="
+            docker builder prune -af || true
+            df -h /
