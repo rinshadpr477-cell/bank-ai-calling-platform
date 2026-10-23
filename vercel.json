@@ -3,7 +3,8 @@
   "services": {
     "bank-ai-calling": {
       "root": "bank-ai-calling",
-      "framework": "nextjs"
+      "framework": "nextjs",
+      "buildCommand": "npx prisma generate && next build"
     }
   },
   "rewrites": [
