@@ -2,10 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { newCampaignSchema, NewCampaignFormData } from "@/lib/validation/campaignSchemas";
+import {
+  ArrowLeft,
+  Bot,
+  HelpCircle,
+  Loader2,
+  Save,
+} from "lucide-react";
 
 export default function EditCampaignPage() {
   const params = useParams();
@@ -13,7 +21,12 @@ export default function EditCampaignPage() {
   const campaignId = params.id as string;
   const [loading, setLoading] = useState(true);
 
-  const {register,handleSubmit,reset,formState: { errors, isSubmitting },} = useForm<NewCampaignFormData>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<NewCampaignFormData>({
     resolver: zodResolver(newCampaignSchema),
   });
 
@@ -40,72 +53,118 @@ export default function EditCampaignPage() {
       toast.error(responseData.error ?? "Something went wrong.");
       return;
     }
-    toast.success("Campaign updated.");
+    toast.success("Campaign updated successfully.");
     router.push(`/campaigns/${campaignId}`);
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen w-full bg-[#E9E0CF] p-8">
-        <p className="text-sm text-[#5E775E]">Loading campaign...</p>
+      <div className="flex flex-col items-center justify-center py-24 text-slate-400">
+        <Loader2 className="h-8 w-8 animate-spin text-[#004e9f]" />
+        <p className="mt-3 text-sm font-medium text-slate-600">Loading campaign configuration...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#E9E0CF] p-8">
-      <div className="w-full">
-        <h1 className="mb-6 text-2xl font-semibold text-[#132B23]">
+    <div className="w-full px-4 py-6 sm:px-6 lg:px-8 max-w-4xl mx-auto space-y-6">
+      {/* Header */}
+      <div>
+        <Link
+          href={`/campaigns/${campaignId}`}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-[#004e9f] transition-colors mb-3"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to Campaign Details
+        </Link>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
           Edit Campaign
         </h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Update campaign title, conversational agent prompts, and language configuration.
+        </p>
       </div>
 
-      <div className="mx-auto w-full max-w-2xl">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 rounded-2xl border border-[#BA9B5F]/30 bg-[#F5F0E6] p-8 shadow-sm">
-          <div>
-            <label className="block text-sm font-medium text-[#132B23]">
-              Campaign Name
+      {/* Form Container */}
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="rounded-2xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm space-y-6"
+      >
+        <div>
+          <label className="block text-sm font-semibold text-slate-900">
+            Campaign Name <span className="text-rose-500">*</span>
+          </label>
+          <input
+            type="text"
+            {...register("name")}
+            className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition-all focus:border-[#004e9f] focus:ring-2 focus:ring-[#004e9f]/20"
+          />
+          {errors.name && (
+            <p className="mt-1.5 text-xs font-medium text-rose-600">{errors.name.message}</p>
+          )}
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+              <Bot className="h-4 w-4 text-[#004e9f]" />
+              AI Agent Prompt & Compliance Guidelines <span className="text-rose-500">*</span>
             </label>
-            <input type="text" {...register("name")} className="mt-1 w-full rounded-md border border-[#BA9B5F]/40 bg-white px-3 py-2 text-sm text-[#132B23] outline-none focus:border-[#5E775E] focus:ring-2 focus:ring-[#5E775E]/30"/>
-            {errors.name && (
-              <p className="mt-1 text-xs text-red-600">{errors.name.message}</p>
+            <span className="text-xs text-slate-400 flex items-center gap-1">
+              <HelpCircle className="h-3 w-3" />
+              {"{{customer_data}}"} injected automatically
+            </span>
+          </div>
+          <textarea
+            rows={10}
+            {...register("aiPrompt")}
+            className="w-full resize-y rounded-xl border border-slate-200 bg-white p-3.5 font-mono text-xs text-slate-900 outline-none transition-all focus:border-[#004e9f] focus:ring-2 focus:ring-[#004e9f]/20 leading-relaxed"
+          />
+          {errors.aiPrompt && (
+            <p className="mt-1.5 text-xs font-medium text-rose-600">{errors.aiPrompt.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-slate-900 mb-1.5">
+            Default Language
+          </label>
+          <select
+            {...register("language")}
+            className="w-full max-w-xs rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition-all focus:border-[#004e9f] focus:ring-2 focus:ring-[#004e9f]/20"
+          >
+            <option value="en">English (India / Global)</option>
+            <option value="hi">Hindi (हिंदी)</option>
+          </select>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          <button
+            type="button"
+            onClick={() => router.push(`/campaigns/${campaignId}`)}
+            className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#004e9f] px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#004e9f]/25 transition-all hover:bg-[#003d7c] active:scale-[0.98] disabled:opacity-50"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Saving Changes...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" />
+                Save Changes
+              </>
             )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[#132B23]">
-              Bank Suggestion
-            </label>
-            <textarea
-              rows={10}
-              {...register("aiPrompt")}
-              className="mt-1 max-h-72 w-full resize-y overflow-y-auto rounded-md border border-[#BA9B5F]/40 bg-white px-3 py-2 text-sm text-[#132B23] outline-none focus:border-[#5E775E] focus:ring-2 focus:ring-[#5E775E]/30"
-            />
-            {errors.aiPrompt && (
-              <p className="mt-1 text-xs text-red-600">{errors.aiPrompt.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[#132B23]">
-              Language
-            </label>
-            <select {...register("language")} className="mt-1 w-full rounded-md border border-[#BA9B5F]/40 bg-white px-3 py-2 text-sm text-[#132B23] outline-none focus:border-[#5E775E]">
-              <option value="en">English</option>
-              <option value="hi">Hindi</option>
-            </select>
-          </div>
-
-          <div className="flex gap-3">
-            <button type="submit" disabled={isSubmitting} className="flex-1 rounded-md bg-[#132B23] px-3 py-2.5 text-sm font-medium text-[#E9E0CF] transition-colors hover:bg-[#5E775E] active:bg-[#0d1f18] disabled:opacity-50">
-              {isSubmitting ? "Saving..." : "Save Changes"}
-            </button>
-            <button type="button" onClick={() => router.push(`/campaigns/${campaignId}`)} className="rounded-md border border-[#BA9B5F]/40 px-4 py-2.5 text-sm font-medium text-[#132B23] transition-colors hover:bg-[#BA9B5F]/10">
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

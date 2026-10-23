@@ -3,8 +3,17 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
 import { newCampaignSchema, NewCampaignFormData } from "@/lib/validation/campaignSchemas";
+import {
+  ArrowLeft,
+  Sparkles,
+  Bot,
+  HelpCircle,
+  Loader2,
+  FileText,
+} from "lucide-react";
 
 const BANK_SUGGESTION_TEMPLATES: Record<string, string> = {
   kyc: `You are an AI Voice Agent for a Cooperative Bank.
@@ -113,20 +122,25 @@ Instructions:
 };
 
 const TEMPLATE_LABELS: { value: string; label: string }[] = [
-  { value: "", label: "— Choose a suggestion to start from (optional) —" },
-  { value: "kyc", label: "KYC Verification" },
-  { value: "loanFollowUp", label: "Loan Follow-up" },
+  { value: "", label: "— Choose a suggestion template (optional) —" },
+  { value: "kyc", label: "KYC Verification & Document Update" },
+  { value: "loanFollowUp", label: "Loan Follow-up & Pending Documents" },
   { value: "emiReminder", label: "EMI / Payment Reminder" },
-  { value: "recovery", label: "Recovery / Collection Call" },
-  { value: "fdRenewal", label: "Fixed Deposit (FD) Renewal" },
-  { value: "complaint", label: "Complaint & Customer Support" },
-  { value: "promotional", label: "Promotional / New Scheme Offer" },
+  { value: "recovery", label: "Recovery & Debt Rehabilitation" },
+  { value: "fdRenewal", label: "Fixed Deposit (FD) Renewal Reminder" },
+  { value: "complaint", label: "Complaint & Grievance Follow-up" },
+  { value: "promotional", label: "Promotional / Special Deposit Scheme" },
 ];
 
 export default function NewCampaignPage() {
   const router = useRouter();
 
-  const {register,handleSubmit,setValue,formState: { errors, isSubmitting },} = useForm<NewCampaignFormData>({
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<NewCampaignFormData>({
     resolver: zodResolver(newCampaignSchema),
     defaultValues: { language: "en" },
   });
@@ -140,83 +154,158 @@ export default function NewCampaignPage() {
   }
 
   async function onSubmit(data: NewCampaignFormData) {
-    const res = await fetch("/api/campaigns", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+    const res = await fetch("/api/campaigns", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
     if (!res.ok) {
       const responseData = await res.json().catch(() => ({}));
       toast.error(responseData.error ?? "Something went wrong.");
       return;
     }
     const { campaign } = await res.json();
-    toast.success("Campaign created.");
+    toast.success("Campaign created successfully.");
     router.push(`/campaigns/${campaign.id}`);
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#E9E0CF] p-8">
-      <div className="w-full">
-        <h1 className="mb-6 text-2xl font-semibold text-[#132B23]">
-          New Campaign
+    <div className="w-full px-4 py-6 sm:px-6 lg:px-8 max-w-4xl mx-auto space-y-6">
+      {/* Header */}
+      <div>
+        <Link
+          href="/campaigns"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-[#004e9f] transition-colors mb-3"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to Campaigns
+        </Link>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          Create New Campaign
         </h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Configure autonomous agent instructions, prompt personality, and target language.
+        </p>
       </div>
 
-      <div className="mx-auto w-full max-w-2xl">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 rounded-2xl border border-[#BA9B5F]/30 bg-[#F5F0E6] p-8 shadow-sm">
-          <div>
-            <label className="block text-sm font-medium text-[#132B23]">
-              Campaign Name
+      {/* Form Container */}
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="rounded-2xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm space-y-6"
+      >
+        {/* Campaign Name */}
+        <div>
+          <label className="block text-sm font-semibold text-slate-900">
+            Campaign Name <span className="text-rose-500">*</span>
+          </label>
+          <p className="text-xs text-slate-500 mt-0.5 mb-2">
+            A clear internal identifier for this outreach cohort.
+          </p>
+          <input
+            type="text"
+            {...register("name")}
+            placeholder="e.g. Home Loan Rate Reduction Cohort — Q4"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none transition-all focus:border-[#004e9f] focus:ring-2 focus:ring-[#004e9f]/20"
+          />
+          {errors.name && (
+            <p className="mt-1.5 text-xs font-medium text-rose-600">{errors.name.message}</p>
+          )}
+        </div>
+
+        {/* Suggestion Template Quick-Select */}
+        <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4">
+          <div className="flex items-center gap-2 mb-1.5">
+            <Sparkles className="h-4 w-4 text-[#004e9f]" />
+            <label className="text-xs font-semibold uppercase tracking-wider text-[#004e9f]">
+              Banking Template Suggestions
             </label>
-            <input type="text" {...register("name")} placeholder="e.g. Home Loan Outreach — July" className="mt-1 w-full rounded-md border border-[#BA9B5F]/40 bg-white px-3 py-2 text-sm text-[#132B23] outline-none focus:border-[#5E775E] focus:ring-2 focus:ring-[#5E775E]/30"/>
-            {errors.name && (
-              <p className="mt-1 text-xs text-red-600">{errors.name.message}</p>
+          </div>
+          <p className="text-xs text-slate-600 mb-2.5">
+            Select an enterprise template to populate standard compliance instructions, or author your own from scratch.
+          </p>
+          <select
+            onChange={(e) => handleTemplateSelect(e.target.value)}
+            defaultValue=""
+            className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition-all focus:border-[#004e9f] focus:ring-2 focus:ring-[#004e9f]/20"
+          >
+            {TEMPLATE_LABELS.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* AI Prompt / Instructions */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+              <Bot className="h-4 w-4 text-[#004e9f]" />
+              AI Agent Prompt & Compliance Instructions <span className="text-rose-500">*</span>
+            </label>
+            <span className="text-xs text-slate-400 flex items-center gap-1">
+              <HelpCircle className="h-3 w-3" />
+              Use {"{{customer_data}}"} for dynamic injection
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 mb-2">
+            The AI representative will strictly follow these conversational guidelines during live voice interaction.
+          </p>
+          <textarea
+            rows={10}
+            {...register("aiPrompt")}
+            placeholder="You are an AI representative calling from Cooperative Bank..."
+            className="w-full resize-y rounded-xl border border-slate-200 bg-white p-3.5 font-mono text-xs text-slate-900 placeholder:text-slate-400 outline-none transition-all focus:border-[#004e9f] focus:ring-2 focus:ring-[#004e9f]/20 leading-relaxed"
+          />
+          {errors.aiPrompt && (
+            <p className="mt-1.5 text-xs font-medium text-rose-600">{errors.aiPrompt.message}</p>
+          )}
+        </div>
+
+        {/* Language Selection */}
+        <div>
+          <label className="block text-sm font-semibold text-slate-900 mb-1">
+            Primary Language
+          </label>
+          <p className="text-xs text-slate-500 mb-2">
+            Customer-specific language in uploaded CSV files will override this default.
+          </p>
+          <select
+            {...register("language")}
+            className="w-full max-w-xs rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none transition-all focus:border-[#004e9f] focus:ring-2 focus:ring-[#004e9f]/20"
+          >
+            <option value="en">English (India / Global)</option>
+            <option value="hi">Hindi (हिंदी)</option>
+          </select>
+        </div>
+
+        {/* Form Actions */}
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          <Link
+            href="/campaigns"
+            className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            Cancel
+          </Link>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="inline-flex items-center gap-2 rounded-xl bg-[#004e9f] px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#004e9f]/25 transition-all hover:bg-[#003d7c] active:scale-[0.98] disabled:opacity-50"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Creating Campaign...
+              </>
+            ) : (
+              <>
+                <FileText className="h-4 w-4" />
+                Create Campaign
+              </>
             )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[#132B23]">
-              Bank Suggestion
-            </label>
-
-            <select
-              onChange={(e) => handleTemplateSelect(e.target.value)}
-              defaultValue=""
-              className="mt-1 w-full rounded-md border border-[#BA9B5F]/40 bg-white px-3 py-2 text-sm text-[#132B23] outline-none focus:border-[#5E775E]"
-            >
-              {TEMPLATE_LABELS.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-            <p className="mt-1 text-xs text-[#5E775E]">
-              Picking a suggestion fills in a starting template below — edit it freely, including the {"{{customer_data}}"} section, before creating the campaign.
-            </p>
-
-            <textarea
-              rows={10}
-              {...register("aiPrompt")}
-              placeholder="You are an SBI loan officer. Introduce yourself. Explain the loan scheme..."
-              className="mt-3 max-h-72 w-full resize-y overflow-y-auto rounded-md border border-[#BA9B5F]/40 bg-white px-3 py-2 text-sm text-[#132B23] outline-none focus:border-[#5E775E] focus:ring-2 focus:ring-[#5E775E]/30"
-            />
-            {errors.aiPrompt && (
-              <p className="mt-1 text-xs text-red-600">{errors.aiPrompt.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[#132B23]">
-              Language
-            </label>
-            <select {...register("language")} className="mt-1 w-full rounded-md border border-[#BA9B5F]/40 bg-white px-3 py-2 text-sm text-[#132B23] outline-none focus:border-[#5E775E]">
-              <option value="en">English</option>
-              <option value="hi">Hindi</option>
-            </select>
-          </div>
-
-          <button type="submit" disabled={isSubmitting} className="w-full rounded-md bg-[#132B23] px-3 py-2.5 text-sm font-medium text-[#E9E0CF] transition-colors hover:bg-[#5E775E] active:bg-[#0d1f18] disabled:opacity-50">
-            {isSubmitting ? "Creating..." : "Create Campaign"}
           </button>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   );
 }

@@ -33,7 +33,10 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden — Admin access required" }, { status: 403 });
   }
 
-  const body = await req.json();
+  const body = await req.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
   const { defaultAiPrompt,defaultVoice,defaultLanguage,defaultRetryAttempts,businessHoursStart,businessHoursEnd,webhookUrl,} = body;
 
   if (!defaultAiPrompt || typeof defaultAiPrompt !== "string") {

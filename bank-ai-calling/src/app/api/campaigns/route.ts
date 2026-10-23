@@ -26,7 +26,10 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const session = await requireRole(CAN_MANAGE_CAMPAIGNS);
-    const body = await req.json();
+    const body = await req.json().catch(() => null);
+    if (!body) {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
     const { name, aiPrompt, language, voice } = body;
 
     if (!name || !aiPrompt) {

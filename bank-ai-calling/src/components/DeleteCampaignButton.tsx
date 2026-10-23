@@ -3,12 +3,18 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Trash2, AlertTriangle, Loader2 } from "lucide-react";
 
-export function DeleteCampaignButton({ campaignId, campaignName }: { campaignId: string; campaignName: string }) {
+export function DeleteCampaignButton({
+  campaignId,
+  campaignName,
+}: {
+  campaignId: string;
+  campaignName: string;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -28,31 +34,75 @@ export function DeleteCampaignButton({ campaignId, campaignName }: { campaignId:
       setOpen(false);
       return;
     }
-    toast.success("Campaign deleted.");
+    toast.success("Campaign deleted permanently.");
     router.push("/campaigns");
   }
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50">
+      <button
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3.5 py-2 text-xs font-semibold text-rose-600 shadow-sm transition-colors hover:bg-rose-50"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
         Delete Campaign
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => !deleting && setOpen(false)} role="presentation">
-          <div className="w-full max-w-sm rounded-2xl border border-[#BA9B5F]/30 bg-[#F5F0E6] p-6 shadow-xl"onClick={(e) => e.stopPropagation()} role="alertdialog"aria-modal="true"aria-labelledby="delete-dialog-title">
-            <h2 id="delete-dialog-title" className="text-lg font-semibold text-[#132B23]">
-              Delete campaign?
-            </h2>
-            <p className="mt-2 text-sm text-[#5E775E]">
-              This permanently removes <strong className="text-[#132B23]">{campaignName}</strong>, along with all its customers and call history. This action cannot be undone.
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in"
+          onClick={() => !deleting && setOpen(false)}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-dialog-title"
+          >
+            <div className="flex items-center gap-3 text-rose-600">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 border border-rose-200">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 id="delete-dialog-title" className="text-base font-bold text-slate-900">
+                  Delete Campaign Permanently?
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Irreversible destructive action
+                </p>
+              </div>
+            </div>
+
+            <p className="mt-4 text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+              This will permanently delete <strong className="text-slate-900">{campaignName}</strong> along with all associated customer rosters, call logs, and transcripts.
             </p>
+
             <div className="mt-6 flex justify-end gap-3">
-              <button onClick={() => setOpen(false)} disabled={deleting} className="rounded-md border border-[#BA9B5F]/40 px-4 py-2 text-sm font-medium text-[#132B23] transition-colors hover:bg-[#BA9B5F]/10 disabled:opacity-50">
+              <button
+                onClick={() => setOpen(false)}
+                disabled={deleting}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
                 Cancel
               </button>
-              <button onClick={handleDelete} disabled={deleting} className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50">
-                {deleting ? "Deleting..." : "Delete permanently"}
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-rose-700 transition-colors disabled:opacity-50"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Confirm Delete
+                  </>
+                )}
               </button>
             </div>
           </div>

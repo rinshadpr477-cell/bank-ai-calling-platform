@@ -23,12 +23,20 @@ export async function POST(req: NextRequest) {
     .update(rawBody)
     .digest("hex");
 
-  if (expectedSignature !== signature) {
+  const expectedBuf = Buffer.from(expectedSignature);
+  const sigBuf = Buffer.from(signature);
+
+  if (expectedBuf.length !== sigBuf.length || !crypto.timingSafeEqual(expectedBuf, sigBuf)) {
     console.warn("[Webhook] Signature mismatch — rejecting request");
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  const event = JSON.parse(rawBody);
+  let event: any;
+  try {
+    event = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
   const eventType: string = event.event;
   const subscriptionEntity = event.payload?.subscription?.entity;
 

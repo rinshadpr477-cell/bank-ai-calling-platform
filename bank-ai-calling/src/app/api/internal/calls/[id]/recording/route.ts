@@ -10,16 +10,30 @@ export async function POST(
   if (authError) return authError;
 
   const { id: callId } = await params;
-  const { recordingUrl } = await req.json();
+  const body = await req.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
 
+  const { recordingUrl } = body;
   if (!recordingUrl) {
     return NextResponse.json({ error: "recordingUrl is required" }, { status: 400 });
   }
 
-  const call = await prisma.call.update({
-    where: { id: callId },
-    data: { recordingUrl },
-  });
+  const existingCall = await prisma.call.findUnique({ where: { id: callId } });
+  if (!existingCall) {
+    return NextResponse.json({ error: "Call not found" }, { status: 404 });
+  }
 
-  return NextResponse.json({ call });
+  try {
+    const call = await prisma.call.update({
+      where: { id: callId },
+      data: { recordingUrl },
+    });
+
+    return NextResponse.json({ call });
+  } catch (err) {
+    console.error("Error updating recording URL:", err);
+    return NextResponse.json({ error: "Failed to update recording" }, { status: 500 });
+  }
 }

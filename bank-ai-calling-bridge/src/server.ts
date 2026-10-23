@@ -6,7 +6,7 @@ import { connectToGemini, sendAudioToGemini, closeGemini, EndCallArgs } from './
 import { getCallDetails, updateCallStatus, appendTranscriptTurn, saveCallSummary, saveRecordingUrl } from './lib/internalApi';
 import { summarizeFromRecording } from './lib/audioSummarization';
 import { summarizeCall } from './lib/summarization';
-import { generateTwiML, getTwilioClient } from './lib/twilio';
+import { generateTwiML, getTwilioClient, validateTwilioWebhookRequest } from './lib/twilio';
 import { campaignQueue } from './lib/campaignQueue';
 
 const PORT = parseInt(process.env.PORT || '8080', 10);
@@ -36,6 +36,17 @@ const server = createServer(async (req, res) => {
         res.end(JSON.stringify(data));
     };
 
+    if (path === '/health' || path === '/api/health') {
+        sendJson({
+            status: 'healthy',
+            service: 'bank-ai-calling-bridge',
+            uptimeSeconds: Math.round(process.uptime()),
+            memoryUsage: process.memoryUsage(),
+            timestamp: Date.now(),
+        });
+        return;
+    }
+
     if (path === '/api/twiml' && req.method === 'POST') {
         const callId = parsedUrl.query.callId as string;
         console.log(`[Twilio] /api/twiml hit — callId=${callId}`);
@@ -61,6 +72,18 @@ const server = createServer(async (req, res) => {
         req.on('data', (chunk) => { body += chunk.toString(); });
         req.on('end', async () => {
             const params = new URLSearchParams(body);
+            const signature = req.headers['x-twilio-signature'] as string | undefined;
+            const fullUrl = `${BACKEND_URL}${req.url}`;
+            const paramsObj: Record<string, string> = {};
+            params.forEach((v, k) => { paramsObj[k] = v; });
+
+            if (!validateTwilioWebhookRequest(signature, fullUrl, paramsObj)) {
+                console.warn(`[Twilio Security] Rejected unverified call-status webhook for callId=${callId}`);
+                res.writeHead(403, { 'Content-Type': 'text/plain' });
+                res.end('Forbidden: Invalid Twilio signature');
+                return;
+            }
+
             const callStatus = params.get('CallStatus');
             const callSid = params.get('CallSid');
             console.log(`[CallStatus] callId=${callId} callSid=${callSid} status=${callStatus}`);
@@ -91,10 +114,22 @@ const server = createServer(async (req, res) => {
         let body = '';
         req.on('data', (chunk) => { body += chunk.toString(); });
         req.on('end', async () => {
+            const params = new URLSearchParams(body);
+            const signature = req.headers['x-twilio-signature'] as string | undefined;
+            const fullUrl = `${BACKEND_URL}${req.url}`;
+            const paramsObj: Record<string, string> = {};
+            params.forEach((v, k) => { paramsObj[k] = v; });
+
+            if (!validateTwilioWebhookRequest(signature, fullUrl, paramsObj)) {
+                console.warn(`[Twilio Security] Rejected unverified recording-status webhook for callId=${callId}`);
+                res.writeHead(403, { 'Content-Type': 'text/plain' });
+                res.end('Forbidden: Invalid Twilio signature');
+                return;
+            }
+
             res.writeHead(200);
             res.end();
             if (!callId) return;
-            const params = new URLSearchParams(body);
             const recordingUrl = params.get('RecordingUrl');
             const recordingStatus = params.get('RecordingStatus');
             console.log(`[Recording] callId=${callId} status=${recordingStatus} url=${recordingUrl}`);

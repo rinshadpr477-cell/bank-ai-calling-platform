@@ -3,8 +3,15 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Phone, FileText, Loader2, Sparkles, X } from "lucide-react";
 
-export function LogManualCallModal({ customerId, customerName }: { customerId: string; customerName: string }) {
+export function LogManualCallModal({
+  customerId,
+  customerName,
+}: {
+  customerId: string;
+  customerName: string;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [notes, setNotes] = useState("");
@@ -34,7 +41,7 @@ export function LogManualCallModal({ customerId, customerName }: { customerId: s
       return;
     }
 
-    toast.success("Manual call logged.");
+    toast.success("Manual call logged and structured verdict extracted.");
     setNotes("");
     setOpen(false);
     router.refresh();
@@ -44,51 +51,91 @@ export function LogManualCallModal({ customerId, customerName }: { customerId: s
     <>
       <button
         onClick={() => setOpen(true)}
-        className="rounded-md border border-[#5E775E]/40 px-2.5 py-1 text-xs font-medium text-[#5E775E] transition-colors hover:bg-[#5E775E]/10"
+        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-xs hover:border-[#004e9f] hover:text-[#004e9f] transition-all"
       >
-        Log Manual Call
+        <Phone className="h-3 w-3" />
+        Log Call
       </button>
 
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in"
           onClick={() => !saving && setOpen(false)}
           role="presentation"
         >
           <div
-            className="w-full max-w-md rounded-2xl border border-[#BA9B5F]/30 bg-[#F5F0E6] p-6 shadow-xl"
+            className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl animate-fade-in"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="manual-call-dialog-title"
           >
-            <h2 id="manual-call-dialog-title" className="text-lg font-semibold text-[#132B23]">
-              Log call with {customerName}
-            </h2>
-            <p className="mt-1 text-sm text-[#5E775E]">
-              Describe what was discussed, in your own words. The system will extract the outcome, next action, and follow-up date automatically.
-            </p>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={5}
-              placeholder="e.g. Spoke with the customer. He is interested but wants to discuss pricing with his partner. Asked me to call again on Friday."
-              className="mt-3 w-full rounded-md border border-[#BA9B5F]/40 bg-white px-3 py-2 text-sm text-[#132B23] outline-none focus:border-[#5E775E] focus:ring-2 focus:ring-[#5E775E]/30"
-            />
-            <div className="mt-4 flex justify-end gap-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-[#004e9f]">
+                  <FileText className="h-4 w-4" />
+                </div>
+                <div>
+                  <h2
+                    id="manual-call-dialog-title"
+                    className="text-sm font-bold text-slate-900"
+                  >
+                    Log Manual Call — {customerName}
+                  </h2>
+                  <p className="text-[11px] text-slate-500">
+                    Natural language notes are processed to extract interest and action items.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setOpen(false)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-4">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Conversation Notes & Summary
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={5}
+                placeholder="e.g. Spoke with Rahul regarding the loan rate. He asked for an EMI chart and requested a follow-up call on Monday morning."
+                className="w-full rounded-xl border border-slate-200 bg-white p-3 text-xs text-slate-900 placeholder:text-slate-400 outline-none transition-all focus:border-[#004e9f] focus:ring-2 focus:ring-[#004e9f]/20"
+              />
+              <p className="mt-1.5 flex items-center gap-1 text-[11px] text-slate-400">
+                <Sparkles className="h-3 w-3 text-[#004e9f]" />
+                System automatically categorizes sentiment, outcome, and follow-up dates.
+              </p>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3 pt-3 border-t border-slate-100">
               <button
                 onClick={() => setOpen(false)}
                 disabled={saving}
-                className="rounded-md border border-[#BA9B5F]/40 px-4 py-2 text-sm font-medium text-[#132B23] transition-colors hover:bg-[#BA9B5F]/10 disabled:opacity-50"
+                className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving || !notes.trim()}
-                className="rounded-md bg-[#132B23] px-4 py-2 text-sm font-medium text-[#E9E0CF] transition-colors hover:bg-[#5E775E] disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#004e9f] px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-[#003d7c] transition-all disabled:opacity-50"
               >
-                {saving ? "Saving..." : "Save & Extract"}
+                {saving ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Extracting...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Save & Extract
+                  </>
+                )}
               </button>
             </div>
           </div>

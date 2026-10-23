@@ -11,7 +11,17 @@ export async function PATCH(
   try {
     await requireRole(CAN_MANAGE_CAMPAIGNS);
     const { id } = await params;
-    const body = await req.json();
+
+    const existing = await prisma.campaign.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+    }
+
+    const body = await req.json().catch(() => null);
+    if (!body) {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
     const { name, aiPrompt, language, voice } = body;
 
     if (!name || !aiPrompt) {
@@ -39,6 +49,12 @@ export async function DELETE(
   try {
     await requireRole(["ADMIN"]);
     const { id } = await params;
+
+    const existing = await prisma.campaign.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+    }
+
     await prisma.campaign.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (err) {

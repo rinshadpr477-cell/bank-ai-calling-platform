@@ -7,10 +7,11 @@ export async function POST(req: NextRequest) {
   try {
     await requireRole(["ADMIN", "SUPERVISOR"]);
 
-    const { campaignId } = await req.json();
-    if (!campaignId) {
+    const body = await req.json().catch(() => null);
+    if (!body || !body.campaignId) {
       return NextResponse.json({ error: "campaignId is required" }, { status: 400 });
     }
+    const { campaignId } = body;
 
 
     const billingAccount = await prisma.billingAccount.findFirst();

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 
 export function verifyInternalRequest(req: NextRequest): NextResponse | null {
   const secret = req.headers.get("x-internal-secret");
@@ -9,9 +10,16 @@ export function verifyInternalRequest(req: NextRequest): NextResponse | null {
     return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
   }
 
-  if (!secret || secret !== expected) {
+  if (!secret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  return null; 
+  const secretBuf = Buffer.from(secret);
+  const expectedBuf = Buffer.from(expected);
+
+  if (secretBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(secretBuf, expectedBuf)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  return null;
 }

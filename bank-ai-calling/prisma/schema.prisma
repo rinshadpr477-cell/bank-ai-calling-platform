@@ -33,6 +33,7 @@ model User {
   campaigns     Campaign[] @relation("CampaignCreator")
   accounts      Account[]
   sessions      Session[]
+  assignedFollowUps FollowUpTask[]
 
   @@map("users")
 }
@@ -133,6 +134,7 @@ model Customer {
   status       CustomerStatus @default(PENDING)
 
   calls        Call[]
+  followUps    FollowUpTask[]
 
   createdAt    DateTime       @default(now())
 
@@ -177,6 +179,7 @@ model Call {
 
   transcript     Transcript?
   summary        CallSummary?
+  followUps      FollowUpTask[]
 
   createdAt      DateTime   @default(now())
 
@@ -317,4 +320,39 @@ model Settings {
   updatedAt             DateTime @updatedAt
 
   @@map("settings")
+}
+
+// ---------------------------------------------------------------------
+// MODULE 10: Collections CRM & Follow-up Tasks
+// ---------------------------------------------------------------------
+
+enum FollowUpStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+model FollowUpTask {
+  id           String         @id @default(cuid())
+  customerId   String
+  customer     Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  callId       String?
+  call         Call?          @relation(fields: [callId], references: [id], onDelete: SetNull)
+  assignedToId String?
+  assignedTo   User?          @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  title        String
+  notes        String?        @db.Text
+  dueDate      DateTime
+  priority     Priority       @default(MEDIUM)
+  status       FollowUpStatus @default(PENDING)
+
+  completedAt  DateTime?
+
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([customerId])
+  @@index([status, dueDate])
+  @@map("follow_up_tasks")
 }

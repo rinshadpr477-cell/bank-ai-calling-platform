@@ -53,6 +53,20 @@ export function getTwilioClient() {
     return client;
 }
 
+export function validateTwilioWebhookRequest(
+    signature: string | undefined,
+    url: string,
+    params: Record<string, string>
+): boolean {
+    if (!authToken) return false;
+    // Allow local development bypass only if specifically configured
+    if (process.env.SKIP_TWILIO_VALIDATION === 'true' && process.env.NODE_ENV !== 'production') {
+        return true;
+    }
+    if (!signature) return false;
+    return twilio.validateRequest(authToken, signature, url, params);
+}
+
 function escapeXml(text: string): string {
     return text
         .replace(/&/g, '&amp;')

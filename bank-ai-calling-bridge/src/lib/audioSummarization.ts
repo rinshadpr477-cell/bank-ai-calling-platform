@@ -30,6 +30,12 @@ export async function summarizeFromRecording(
     customerName: string,
 ): Promise<AudioSummaryResult | null> {
     try {
+        const parsedUrl = new URL(recordingUrl);
+        if (parsedUrl.hostname !== 'api.twilio.com') {
+            console.error(`[AudioSummary] Security error: recordingUrl hostname '${parsedUrl.hostname}' is not api.twilio.com`);
+            return null;
+        }
+
         const accountSid = process.env.TWILIO_ACCOUNT_SID || '';
         const authToken = process.env.TWILIO_AUTH_TOKEN || '';
         const credentials = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
@@ -44,7 +50,7 @@ export async function summarizeFromRecording(
         const audioBuffer = Buffer.from(await audioResponse.arrayBuffer());
         const audioBase64 = audioBuffer.toString('base64');
 
-       const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
         const prompt = `You are analyzing a recorded bank outbound sales call between an AI agent and a customer named ${customerName}.
 

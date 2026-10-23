@@ -13,7 +13,10 @@ export async function POST(
   if (authError) return authError;
 
   const { id } = await params;
-  const body = await req.json();
+  const body = await req.json().catch(() => null);
+  if (!body) {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
   const { status, twilioCallSid } = body;
 
   if (!VALID_STATUSES.includes(status)) {
@@ -28,12 +31,18 @@ export async function POST(
     updateData.endedAt = new Date();
   }
 
-  const call = await prisma.$transaction(async (tx) => {
-    const updated = await tx.call.update({
-      where: { id },
-      data: updateData,
-      include: { campaign: true, customer: true },
-    });
+  const existingCall = await prisma.call.findUnique({ where: { id } });
+  if (!existingCall) {
+    return NextResponse.json({ error: "Call not found" }, { status: 404 });
+  }
+
+  try {
+    const call = await prisma.$transaction(async (tx) => {
+      const updated = await tx.call.update({
+        where: { id },
+        data: updateData,
+        include: { campaign: true, customer: true },
+      });
     if (status === "IN_PROGRESS") {
       const existingLog = await tx.creditUsageLog.findFirst({ where: { callId: id } });
       if (!existingLog) {
@@ -76,5 +85,9 @@ export async function POST(
     maxWait: 10000,
     timeout: 10000,
   });
-  return NextResponse.json({ call });
+    return NextResponse.json({ call });
+  } catch (err) {
+    console.error("Error updating call status:", err);
+    return NextResponse.json({ error: "Failed to update call status" }, { status: 500 });
+  }
 }

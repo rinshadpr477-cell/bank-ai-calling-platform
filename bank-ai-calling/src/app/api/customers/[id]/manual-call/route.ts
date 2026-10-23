@@ -13,11 +13,13 @@ export async function POST(
     }
 
     const { id: customerId } = await params;
-    const { notes } = await req.json();
+    const body = await req.json().catch(() => null);
 
-    if (!notes || typeof notes !== "string" || notes.trim().length === 0) {
+    if (!body || !body.notes || typeof body.notes !== "string" || body.notes.trim().length === 0) {
         return NextResponse.json({ error: "Call notes are required" }, { status: 400 });
     }
+
+    const { notes } = body;
 
     const customer = await prisma.customer.findUnique({
         where: { id: customerId },

@@ -27,6 +27,12 @@ export async function POST(
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
+    // Protection against OOM and oversized payload attacks
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json({ error: "File size exceeds the 5MB limit" }, { status: 400 });
+    }
+
     const text = await file.text();
     const parsed = Papa.parse<CsvRow>(text, {
       header: true,
@@ -41,6 +47,14 @@ export async function POST(
     }
 
     const rows = parsed.data;
+    const MAX_ROWS = 5000;
+    if (rows.length > MAX_ROWS) {
+      return NextResponse.json(
+        { error: `CSV exceeds maximum limit of ${MAX_ROWS} contacts per upload.` },
+        { status: 400 }
+      );
+    }
+
     const seenPhones = new Set<string>();
     const validRows: { name: string; phoneNumber: string; email: string | null; language: string; notes: string | null }[] = [];
     const rejected: { row: number; reason: string }[] = [];
@@ -71,11 +85,19 @@ export async function POST(
       validRows.push({ name, phoneNumber: phone, email, language, notes });
     });
 
-    const existing = await prisma.customer.findMany({
-      where: { campaignId, phoneNumber: { in: [...seenPhones] } },
-      select: { phoneNumber: true },
-    });
-    const existingPhones = new Set(existing.map((e) => e.phoneNumber));
+    // Chunk lookups to avoid exceeding database query parameter limits
+    const allPhones = Array.from(seenPhones);
+    const existingPhones = new Set<string>();
+    const CHUNK_SIZE = 500;
+
+    for (let i = 0; i < allPhones.length; i += CHUNK_SIZE) {
+      const slice = allPhones.slice(i, i + CHUNK_SIZE);
+      const existing = await prisma.customer.findMany({
+        where: { campaignId, phoneNumber: { in: slice } },
+        select: { phoneNumber: true },
+      });
+      existing.forEach((e) => existingPhones.add(e.phoneNumber));
+    }
 
     const toInsert = validRows.filter((r) => {
       if (existingPhones.has(r.phoneNumber)) {
@@ -88,13 +110,18 @@ export async function POST(
       return true;
     });
 
-    const created = await prisma.customer.createMany({
-      data: toInsert.map((r) => ({ ...r, campaignId })),
-    });
+    let insertedCount = 0;
+    for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
+      const slice = toInsert.slice(i, i + CHUNK_SIZE);
+      const created = await prisma.customer.createMany({
+        data: slice.map((r) => ({ ...r, campaignId })),
+      });
+      insertedCount += created.count;
+    }
 
     return NextResponse.json({
       totalRows: rows.length,
-      inserted: created.count,
+      inserted: insertedCount,
       rejected,
     });
   } catch (err) {

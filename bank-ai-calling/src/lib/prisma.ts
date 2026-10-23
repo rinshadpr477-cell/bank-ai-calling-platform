@@ -24,3 +24,12 @@ export const prisma =
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
+
+export { Prisma } from "@/generated/prisma/client";
+export type {
+  CallStatus,
+  CallSource,
+  CustomerStatus,
+  FollowUpStatus,
+  Priority,
+} from "@/generated/prisma/client";

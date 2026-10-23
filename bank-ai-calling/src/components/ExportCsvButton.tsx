@@ -1,10 +1,31 @@
 "use client";
 
-interface Row {name: string;phone: string;status: string;callStatus: string;interested: string;sentiment: string;loanAmount: string;callbackRequired: string;summaryText: string;}
+import { Download } from "lucide-react";
+
+interface Row {
+  name: string;
+  phone: string;
+  status: string;
+  callStatus: string;
+  interested: string;
+  sentiment: string;
+  loanAmount: string;
+  callbackRequired: string;
+  summaryText: string;
+}
 
 export function ExportCsvButton({ rows, filename }: { rows: Row[]; filename: string }) {
   function handleExport() {
-    const headers = ["Name","Phone","Call Status","Interested","Sentiment","Loan Amount","Callback Required","Summary",];
+    const headers = [
+      "Name",
+      "Phone",
+      "Call Status",
+      "Interested",
+      "Sentiment",
+      "Loan Amount",
+      "Callback Required",
+      "Summary",
+    ];
 
     const escapeCsv = (value: string) => `"${value.replace(/"/g, '""')}"`;
 
@@ -36,7 +57,11 @@ export function ExportCsvButton({ rows, filename }: { rows: Row[]; filename: str
   }
 
   return (
-    <button onClick={handleExport}className="rounded-md bg-[#132B23] px-4 py-2 text-sm font-medium text-[#E9E0CF] hover:bg-[#5E775E]">
+    <button
+      onClick={handleExport}
+      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:text-slate-900"
+    >
+      <Download className="h-3.5 w-3.5 text-slate-500" />
       Export CSV
     </button>
   );

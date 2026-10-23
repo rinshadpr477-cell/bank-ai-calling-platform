@@ -33,11 +33,15 @@ export async function POST(
     if (overFreeLimit) {
       return { error: "CREDIT_LIMIT_REACHED" as const };
     }
-    const customer = await tx.customer.findFirst({
-      where: { campaignId, status: "PENDING" },
-      orderBy: { createdAt: "asc" },
-    });
+    // Atomic row-level lock ensures concurrent workers never pick the same customer
+    const lockedCustomers = await tx.$queryRawUnsafe<
+      Array<{ id: string; name: string; phoneNumber: string; language: string }>
+    >(
+      `SELECT id, name, "phoneNumber", language FROM customers WHERE "campaignId" = $1 AND status = 'PENDING' ORDER BY "createdAt" ASC LIMIT 1 FOR UPDATE SKIP LOCKED;`,
+      campaignId
+    );
 
+    const customer = lockedCustomers[0];
     if (!customer) return { done: true as const };
 
     await tx.customer.update({

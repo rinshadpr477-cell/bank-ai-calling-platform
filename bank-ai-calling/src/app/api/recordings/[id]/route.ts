@@ -15,11 +15,35 @@ export async function GET(
 
   const call = await prisma.call.findUnique({
     where: { id: callId },
-    select: { recordingUrl: true },
+    select: {
+      recordingUrl: true,
+      campaign: {
+        select: { createdById: true },
+      },
+    },
   });
 
   if (!call?.recordingUrl) {
     return NextResponse.json({ error: "Recording not found" }, { status: 404 });
+  }
+
+  // Authorization: Only ADMIN, SUPERVISOR, or the user who created the campaign can access recordings
+  const userRole = session.user.role;
+  const isPrivileged = userRole === "ADMIN" || userRole === "SUPERVISOR";
+  const isOwner = call.campaign?.createdById === session.user.id;
+
+  if (!isPrivileged && !isOwner) {
+    return NextResponse.json({ error: "Forbidden — You do not have permission to access this recording" }, { status: 403 });
+  }
+
+  // SSRF guard: Ensure recordingUrl originates strictly from Twilio
+  try {
+    const parsedRecordingUrl = new URL(call.recordingUrl);
+    if (parsedRecordingUrl.hostname !== "api.twilio.com") {
+      return NextResponse.json({ error: "Invalid recording source" }, { status: 400 });
+    }
+  } catch {
+    return NextResponse.json({ error: "Invalid recording URL" }, { status: 400 });
   }
 
   const accountSid = process.env.TWILIO_ACCOUNT_SID_PROXY || "";
