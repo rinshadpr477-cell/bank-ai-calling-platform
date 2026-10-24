@@ -31,9 +31,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  let event: any;
+  interface RazorpayWebhookPayload {
+    event: string;
+    payload?: {
+      subscription?: {
+        entity?: {
+          id: string;
+          current_end?: number;
+          status?: string;
+        };
+      };
+    };
+  }
+
+  let event: RazorpayWebhookPayload;
   try {
-    event = JSON.parse(rawBody);
+    event = JSON.parse(rawBody) as RazorpayWebhookPayload;
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }

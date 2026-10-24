@@ -63,8 +63,9 @@ function getCpuUsagePercent(): number {
   let totalTick = 0;
 
   for (const cpu of cpus) {
-    for (const type in cpu.times) {
-      totalTick += (cpu.times as any)[type];
+    const times = cpu.times as Record<string, number>;
+    for (const type in times) {
+      totalTick += times[type] ?? 0;
     }
     totalIdle += cpu.times.idle;
   }
@@ -85,11 +86,11 @@ async function checkDatabaseHealth(): Promise<{ status: "healthy" | "degraded" |
       status: latencyMs > 500 ? "degraded" : "healthy",
       latencyMs,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     return {
       status: "down",
       latencyMs: Math.round(performance.now() - start),
-      message: err?.message || "Database connection error",
+      message: err instanceof Error ? err.message : "Database connection error",
     };
   }
 }
@@ -130,7 +131,7 @@ async function checkQueueAndRedisHealth(): Promise<{
         delayed: counts.delayed || 0,
       },
     };
-  } catch (err) {
+  } catch {
     return {
       redisStatus: "down",
       redisLatencyMs: Math.round(performance.now() - start),
@@ -189,12 +190,12 @@ async function checkBridgeServerHealth(): Promise<ServiceHealth> {
       message: `Failed to reach bridge at ${bridgeUrl}`,
       lastChecked: new Date().toISOString(),
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     return {
       name: "Telephony Bridge Service",
       status: "down",
       latencyMs: Math.round(performance.now() - start),
-      message: err?.message || "Bridge unreachable",
+      message: err instanceof Error ? err.message : "Bridge unreachable",
       lastChecked: new Date().toISOString(),
     };
   }

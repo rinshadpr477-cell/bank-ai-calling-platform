@@ -7,8 +7,6 @@ import {
   Server,
   Database,
   Cpu,
-  Layers,
-  PhoneCall,
   CheckCircle2,
   AlertTriangle,
   XCircle,
@@ -16,14 +14,8 @@ import {
   Clock,
   ShieldCheck,
   Radio,
-  HardDrive,
-  BarChart3,
-  TrendingUp,
-  Volume2,
   Bell,
   Check,
-  Wifi,
-  Search,
   Zap,
 } from "lucide-react";
 
@@ -106,10 +98,7 @@ export function MonitoringDashboard({ initialData }: { initialData: SnapshotData
   const [data, setData] = useState<SnapshotData>(initialData);
   const [refreshInterval, setRefreshInterval] = useState<number>(10); // 10s default
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-  const [timeRange, setTimeRange] = useState<"15m" | "1h" | "24h">("1h");
   const [activeTab, setActiveTab] = useState<"overview" | "services" | "telephony" | "alerts" | "logs">("overview");
-  const [logFilter, setLogFilter] = useState<string>("ALL");
-  const [logSearch, setLogSearch] = useState<string>("");
 
   const fetchMetrics = useCallback(async (showToast = false) => {
     setIsRefreshing(true);
