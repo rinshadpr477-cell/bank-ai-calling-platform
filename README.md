@@ -162,4 +162,5 @@ Containers communicate via `host.docker.internal` to reach services running outs
 
 Proprietary — internal project.
 
-<img width="1872" height="1010" alt="image" src="https://github.com/user-attachments/assets/718b74fd-d05a-413c-a9c4-f87ab3731ce2" />
+<img width="1837" height="1067" alt="image" src="https://github.com/user-attachments/assets/7270552b-caa2-469e-9acb-424374828f84" />
+
