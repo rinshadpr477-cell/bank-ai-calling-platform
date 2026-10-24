@@ -1,6 +1,6 @@
 # Bank Outbound AI Calling Platform
 
-Live Link : https://54.91.114.77.sslip.io/
+Live Link : https://bank-ai-calling-platform-3igfrt2ye-rinshadpr477-cells-projects.vercel.app
 
 An AI-powered outbound calling platform for banks, insurers, and educational institutions. Upload a customer list, configure a campaign, and let an AI agent — powered by Twilio + Google Gemini Live — call each customer, hold a real conversation, and report back a structured outcome your team can act on.
 
