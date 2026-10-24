@@ -7,12 +7,21 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
+import { prisma } from "@/lib/prisma";
+
 export default async function MonitoringPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
   // Restrict monitoring to ADMIN and SUPERVISOR roles
-  const userRole = session.user.role;
+  let userRole = session.user.role;
+  if (session.user.id) {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    });
+    if (dbUser?.role) userRole = dbUser.role;
+  }
   const isAuthorized = userRole === "ADMIN" || userRole === "SUPERVISOR";
 
   if (!isAuthorized) {
